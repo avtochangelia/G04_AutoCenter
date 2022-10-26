@@ -9,6 +9,7 @@ namespace AutoCenter.Repository;
 public class UnitOfWork : IDisposable
 {
     private readonly AutoDbContext _context;
+    private readonly IDbContextTransaction _transaction;
     private readonly Lazy<IAdministratorRepository>? _administratorRepository;
     private readonly Lazy<ICarCategoryRepository>? _carCategoryRepository;
     private readonly Lazy<ICarRepository>? _carRepository;
@@ -21,6 +22,8 @@ public class UnitOfWork : IDisposable
     public UnitOfWork(IConfiguration configuration)
     {
         _context = new(configuration);
+        _transaction = _context.Database.BeginTransaction();
+
         _administratorRepository = new Lazy<IAdministratorRepository>(() => new AdministratorRepository(_context));
         _carCategoryRepository = new Lazy<ICarCategoryRepository>(() => new CarCategoryRepository(_context));
         _carRepository = new Lazy<ICarRepository>(() => new CarRepository(_context));
@@ -40,16 +43,13 @@ public class UnitOfWork : IDisposable
     public IOrderRepository OrderRepository => _orderRepository!.Value;
     public ITechnicianRepository TechnicianRepository => _technicianRepository!.Value;
 
+    public IDbContextTransaction BeginTransaction() => _transaction;
+
     public int SaveChanges => _context.SaveChanges();
-
-    public IDbContextTransaction BeginTransaction() => _context.Database.BeginTransaction();
-
-    public void CommitTransaction() => _context.Database.CommitTransaction();
-
-    public void RollbackTransaction() => _context.Database.RollbackTransaction();
 
     public void Dispose()
     {
         _context.Dispose();
+        _transaction.Dispose();
     }
 }
